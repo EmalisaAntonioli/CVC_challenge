@@ -8,6 +8,7 @@ import os
 import pygetwindow as gw
 from inputs import get_gamepad
 import csv
+import pygame
 
 # Create directory for saving screenshots and inputs
 if not os.path.exists('screen_caps'):
@@ -48,36 +49,69 @@ class ScreenCapture:
 
 # JoystickHandler class for managing joystick inputs
 class JoystickHandler:
-    def __init__(self, device_id=1):
-        self.gamepad_state = {"LX": 0, "LY": 0, "RX": 0, "RY": 0, "RT": 0, "LT": 0}
+    def __init__(self):
+        # Initialize pygame
+        pygame.init()
+        pygame.joystick.init()
+        
+        # Check if a controller is connected
+        if pygame.joystick.get_count() == 0:
+            raise Exception("No joystick/gamepad connected.")
+        
+        # Initialize the first connected joystick
+        self.joystick = pygame.joystick.Joystick(0)
+        self.joystick.init()
 
+        # Initialize gamepad state
+        self.gamepad_state = {
+            "LX": 0,  # Left Stick X-axis
+            "LY": 0,  # Left Stick Y-axis
+            "RX": 0,  # Right Stick X-axis
+            "RY": 0,  # Right Stick Y-axis
+            "RT": 0,  # Right Trigger (treated as an axis)
+            "LT": 0   # Left Trigger (treated as an axis)
+        }
 
-    # Initialize gamepad state
+        # Open CSV file to store gamepad input data
+        self.csv_file = open('controller_log.csv', 'a', newline='')
+        self.csv_writer = csv.writer(self.csv_file)
+        
+        # Write CSV header
+        self.csv_writer.writerow(["Timestamp", "Left Stick X", "Left Stick Y", "Right Stick X", "Right Stick Y", "Trigger Left", "Trigger Right"])
 
     def get_gamepad_events(self):
-        events = get_gamepad()
-        for event in events:
-            if event.ev_type == "Absolute":
-                if event.code == "ABS_X":  # Left stick X-axis
-                    self.gamepad_state["LX"] = event.state
-                elif event.code == "ABS_Y":  # Left stick Y-axis
-                    self.gamepad_state["LY"] = event.state
-                elif event.code == "ABS_RX":  # Right stick X-axis
-                    self.gamepad_state["RX"] = event.state
-                elif event.code == "ABS_RY":  # Right stick Y-axis
-                    self.gamepad_state["RY"] = event.state
-                elif event.code == "ABS_RZ":  # Right trigger
-                    self.gamepad_state["RT"] = event.state
-                elif event.code == "ABS_Z":  # Left trigger
-                    self.gamepad_state["LT"] = event.state
+        """Poll gamepad events and update the gamepad state."""
+        pygame.event.pump()  # Process event queue
+        
+        # Update stick and trigger values
+        self.gamepad_state["LX"] = self.joystick.get_axis(0)  # Left Stick X-axis
+        self.gamepad_state["LY"] = self.joystick.get_axis(1)  # Left Stick Y-axis
+        self.gamepad_state["RX"] = self.joystick.get_axis(3)  # Right Stick X-axis
+        self.gamepad_state["RY"] = self.joystick.get_axis(4)  # Right Stick Y-axis
+        self.gamepad_state["LT"] = self.joystick.get_axis(2)  # Left Trigger
+        self.gamepad_state["RT"] = self.joystick.get_axis(5)  # Right Trigger
 
     def save_gamepad_events(self):
-        with open('controller_log.csv', 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(["Timestamp", "Left Stick X", "Left Stick Y", "Right Stick X", "Right Stick Y", "Trigger Left", "Trigger Right"])
+        """Save the current gamepad state to the CSV file with a timestamp."""
+        timestamp = time.time()
 
-            
-        return NotImplementedError
+        # Write the gamepad state to the CSV
+        self.csv_writer.writerow([
+            timestamp,
+            self.gamepad_state["LX"],
+            self.gamepad_state["LY"],
+            self.gamepad_state["RX"],
+            self.gamepad_state["RY"],
+            self.gamepad_state["LT"],
+            self.gamepad_state["RT"]
+        ])
+        
+        # Ensure data is flushed to the CSV file
+        self.csv_file.flush()
+
+    def close_csv(self):
+        """Close the CSV file properly."""
+        self.csv_file.close()
 
 
 # GameSession class to handle the overall session
@@ -97,17 +131,19 @@ class GameSession:
             self.screen_capture.save_frame(frame, timestamp)
 
             # Capture joystick inputs
-            joystick_input = self.joystick_handler.process_gamepad_events()
-            self.joystick_handler.save_joystick_input(joystick_input, timestamp)
+            joystick_input = self.joystick_handler.get_gamepad_events()
+            self.joystick_handler.save_gamepad_events()
 
             # Optional: Add a small delay to prevent overwhelming the system
-            time.sleep(0.1)
+            time.sleep(0.5)
+        self.joystick_handler.close_csv()
 
 
 if __name__ == '__main__':
     # Allow time to start the game
+    time.sleep(10)
+    print("start")
     time.sleep(2)
-
     # Create the components
     screen_capture = ScreenCapture()
     joystick_handler = JoystickHandler()
