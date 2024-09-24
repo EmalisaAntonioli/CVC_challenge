@@ -3,8 +3,11 @@ from mss import mss
 import numpy as np
 import time
 import uuid
-import pyvjoy
+# import pyvjoystick as pyvjoy
 import os
+import pygetwindow as gw
+from inputs import get_gamepad
+import csv
 
 # Create directory for saving screenshots and inputs
 if not os.path.exists('screen_caps'):
@@ -13,10 +16,17 @@ if not os.path.exists('screen_caps'):
 # ScreenCapture class for handling screen capture
 class ScreenCapture:
     def __init__(self, game_area=None):
-        self.capture = mss()
+        self.capture = mss()  # Correct mss initialization
         if game_area is None:
-            monitor = self.capture.monitors[1]  # Use primary monitor
-            self.game_area = {"left": 0, "top": 0, "width": monitor["width"], "height": monitor["height"]}
+            game_area = self.get_game_window_coords()
+            if game_area is None:
+                raise ValueError("Game window not found.")
+            self.game_area = {
+                "left": game_area[0], 
+                "top": game_area[1], 
+                "width": game_area[2], 
+                "height": game_area[3]
+            }
         else:
             self.game_area = game_area
 
@@ -28,23 +38,46 @@ class ScreenCapture:
         filename = f'screen_caps/{timestamp}.jpg'
         cv2.imwrite(filename, frame)
 
+    def get_game_window_coords(self, title="Forza Horizon 4"):
+        game_window = gw.getWindowsWithTitle(title)
+        if game_window:
+            game_window = game_window[0]
+            return game_window.left, game_window.top, game_window.width, game_window.height
+        return None
+
 
 # JoystickHandler class for managing joystick inputs
 class JoystickHandler:
     def __init__(self, device_id=1):
-        self.vjoy_device = pyvjoy.VJoyDevice(device_id)
+        self.gamepad_state = {"LX": 0, "LY": 0, "RX": 0, "RY": 0, "RT": 0, "LT": 0}
 
-    def get_joystick_input(self):
-        # TODO adjust this in accordance with everything that needs to be tracked
-        x_axis = self.vjoy_device.get_axis(pyvjoy.HID_USAGE_X)
-        y_axis = self.vjoy_device.get_axis(pyvjoy.HID_USAGE_Y)
-        return {"X": x_axis, "Y": y_axis}
 
-    def save_joystick_input(self, joystick_input, timestamp):
-        filename = f'screen_caps/{timestamp}.txt'
-        with open(filename, 'w') as f:
-            f.write(f"X-Axis: {joystick_input['X']}\n")
-            f.write(f"Y-Axis: {joystick_input['Y']}\n")
+    # Initialize gamepad state
+
+    def get_gamepad_events(self):
+        events = get_gamepad()
+        for event in events:
+            if event.ev_type == "Absolute":
+                if event.code == "ABS_X":  # Left stick X-axis
+                    self.gamepad_state["LX"] = event.state
+                elif event.code == "ABS_Y":  # Left stick Y-axis
+                    self.gamepad_state["LY"] = event.state
+                elif event.code == "ABS_RX":  # Right stick X-axis
+                    self.gamepad_state["RX"] = event.state
+                elif event.code == "ABS_RY":  # Right stick Y-axis
+                    self.gamepad_state["RY"] = event.state
+                elif event.code == "ABS_RZ":  # Right trigger
+                    self.gamepad_state["RT"] = event.state
+                elif event.code == "ABS_Z":  # Left trigger
+                    self.gamepad_state["LT"] = event.state
+
+    def save_gamepad_events(self):
+        with open('controller_log.csv', 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(["Timestamp", "Left Stick X", "Left Stick Y", "Right Stick X", "Right Stick Y", "Trigger Left", "Trigger Right"])
+
+            
+        return NotImplementedError
 
 
 # GameSession class to handle the overall session
@@ -64,7 +97,7 @@ class GameSession:
             self.screen_capture.save_frame(frame, timestamp)
 
             # Capture joystick inputs
-            joystick_input = self.joystick_handler.get_joystick_input()
+            joystick_input = self.joystick_handler.process_gamepad_events()
             self.joystick_handler.save_joystick_input(joystick_input, timestamp)
 
             # Optional: Add a small delay to prevent overwhelming the system
