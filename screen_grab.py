@@ -65,9 +65,9 @@ class JoystickHandler:
         # Initialize gamepad state
         self.gamepad_state = {
             "LX": 0,  # Left Stick X-axis
-            "LY": 0,  # Left Stick Y-axis
-            "RX": 0,  # Right Stick X-axis
-            "RY": 0,  # Right Stick Y-axis
+            # "LY": 0,  # Left Stick Y-axis
+            # "RX": 0,  # Right Stick X-axis
+            # "RY": 0,  # Right Stick Y-axis
             "RT": 0,  # Right Trigger (treated as an axis)
             "LT": 0   # Left Trigger (treated as an axis)
         }
@@ -85,9 +85,9 @@ class JoystickHandler:
         
         # Update stick and trigger values
         self.gamepad_state["LX"] = self.joystick.get_axis(0)  # Left Stick X-axis
-        self.gamepad_state["LY"] = self.joystick.get_axis(1)  # Left Stick Y-axis
-        self.gamepad_state["RX"] = self.joystick.get_axis(3)  # Right Stick X-axis
-        self.gamepad_state["RY"] = self.joystick.get_axis(4)  # Right Stick Y-axis
+        # self.gamepad_state["LY"] = self.joystick.get_axis(1)  # Left Stick Y-axis
+        # self.gamepad_state["RX"] = self.joystick.get_axis(3)  # Right Stick X-axis
+        # self.gamepad_state["RY"] = self.joystick.get_axis(4)  # Right Stick Y-axis
         self.gamepad_state["LT"] = self.joystick.get_axis(2)  # Left Trigger
         self.gamepad_state["RT"] = self.joystick.get_axis(5)  # Right Trigger
 
@@ -99,9 +99,9 @@ class JoystickHandler:
         self.csv_writer.writerow([
             timestamp,
             self.gamepad_state["LX"],
-            self.gamepad_state["LY"],
-            self.gamepad_state["RX"],
-            self.gamepad_state["RY"],
+            # self.gamepad_state["LY"],
+            # self.gamepad_state["RX"],
+            # self.gamepad_state["RY"],
             self.gamepad_state["LT"],
             self.gamepad_state["RT"]
         ])
