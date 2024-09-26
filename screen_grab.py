@@ -35,8 +35,8 @@ class ScreenCapture:
         gamecap = np.array(self.capture.grab(self.game_area))
         return gamecap
 
-    def save_frame(self, frame, timestamp):
-        filename = f'screen_caps/{timestamp}.jpg'
+    def save_frame(self, frame, name):
+        filename = f'screen_caps/{name}.jpg'
         cv2.imwrite(filename, frame)
 
     def get_game_window_coords(self, title="Forza Horizon 4"):
@@ -65,9 +65,6 @@ class JoystickHandler:
         # Initialize gamepad state
         self.gamepad_state = {
             "LX": 0,  # Left Stick X-axis
-            # "LY": 0,  # Left Stick Y-axis
-            # "RX": 0,  # Right Stick X-axis
-            # "RY": 0,  # Right Stick Y-axis
             "RT": 0,  # Right Trigger (treated as an axis)
             "LT": 0   # Left Trigger (treated as an axis)
         }
@@ -85,11 +82,10 @@ class JoystickHandler:
         
         # Update stick and trigger values
         self.gamepad_state["LX"] = self.joystick.get_axis(0)  # Left Stick X-axis
-        # self.gamepad_state["LY"] = self.joystick.get_axis(1)  # Left Stick Y-axis
-        # self.gamepad_state["RX"] = self.joystick.get_axis(3)  # Right Stick X-axis
-        # self.gamepad_state["RY"] = self.joystick.get_axis(4)  # Right Stick Y-axis
         self.gamepad_state["LT"] = self.joystick.get_axis(2)  # Left Trigger
         self.gamepad_state["RT"] = self.joystick.get_axis(5)  # Right Trigger
+
+        return self.gamepad_state
 
     def save_gamepad_events(self):
         """Save the current gamepad state to the CSV file with a timestamp."""
@@ -99,9 +95,6 @@ class JoystickHandler:
         self.csv_writer.writerow([
             timestamp,
             self.gamepad_state["LX"],
-            # self.gamepad_state["LY"],
-            # self.gamepad_state["RX"],
-            # self.gamepad_state["RY"],
             self.gamepad_state["LT"],
             self.gamepad_state["RT"]
         ])
@@ -123,18 +116,22 @@ class GameSession:
     def run(self, duration=60):
         start_time = time.time()
         while time.time() - start_time < duration:
-            # Generate a timestamp for synchronization
-            timestamp = str(uuid.uuid1())  # Generates a unique identifier for each frame/input set
+            
+            # Capture joystick inputs
+            joystick_input = self.joystick_handler.get_gamepad_events()
+            # Uncomment if you want to save the input in a csv file
+            # self.joystick_handler.save_gamepad_events()
+
+            # Generates a unique identifier for each frame/input set
+            timestamp = str(uuid.uuid1())  
 
             # Capture the game screen
             frame = self.screen_capture.capture_frame()
-            self.screen_capture.save_frame(frame, timestamp)
+            # The name will now look like timestamp_joystickLX_joystickLT_joystickRT
+            screen_capture_name = f'{timestamp}_{joystick_input["LX"]}_{joystick_input["LT"]}_{joystick_input["RT"]}'
+            self.screen_capture.save_frame(frame, screen_capture_name)
 
-            # Capture joystick inputs
-            joystick_input = self.joystick_handler.get_gamepad_events()
-            self.joystick_handler.save_gamepad_events()
-
-            # Optional: Add a small delay to prevent overwhelming the system
+            # Adjust to change how many caps are taken
             time.sleep(0.5)
         self.joystick_handler.close_csv()
 
