@@ -128,7 +128,7 @@ class GameSession:
             # Capture the game screen
             frame = self.screen_capture.capture_frame()
             # The name will now look like timestamp_joystickLX_joystickLT_joystickRT
-            screen_capture_name = f'{timestamp}_{joystick_input["LX"]}_{joystick_input["LT"]}_{joystick_input["RT"]}'
+            screen_capture_name = f'{timestamp}_{round(joystick_input["LX"],4)}_{round(joystick_input["LT"],4)}_{round(joystick_input["RT"],4)}'
             self.screen_capture.save_frame(frame, screen_capture_name)
 
             # Adjust to change how many caps are taken
