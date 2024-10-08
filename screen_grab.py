@@ -9,10 +9,14 @@ import pygetwindow as gw
 from inputs import get_gamepad
 import csv
 import pygame
+import re
 
 # Create directory for saving screenshots and inputs
-if not os.path.exists('screen_caps'):
-    os.makedirs('screen_caps')
+if not os.path.exists('screen_caps/train'):
+    os.makedirs('screen_caps/train/steer_left')
+    os.makedirs('screen_caps/train/steer_right')
+    os.makedirs('screen_caps/train/brake')
+    os.makedirs('screen_caps/train/gas')
 
 # ScreenCapture class for handling screen capture
 class ScreenCapture:
@@ -36,8 +40,40 @@ class ScreenCapture:
         return gamecap
 
     def save_frame(self, frame, name):
-        filename = f'screen_caps/{name}.jpg'
-        cv2.imwrite(filename, frame)
+        # Regular expression pattern
+        pattern = r'(?P<timestamp>[0-9a-fA-F\-]+)_(?P<LX>[0-9\.-]+)_(?P<LT>[0-9\.-]+)_(?P<RT>[0-9\.-]+)$'
+        print(name)
+
+        # Search for the pattern in the string
+        match = re.search(pattern, name)
+
+        if match:
+            # Extracting named groups
+            timestamp = match.group('timestamp')
+            LX = float(match.group('LX'))
+            LT = float(match.group('LT'))
+            RT = float(match.group('RT'))
+
+            if LX > 0.1:
+                filename = f'screen_caps/train/steer_right/{name}.jpg'
+                cv2.imwrite(filename, frame)
+            elif LX < -0.1:
+                filename = f'screen_caps/train/steer_left/{name}.jpg'
+                cv2.imwrite(filename, frame)
+            elif LT > 0.1:
+                filename = f'screen_caps/train/brake/{name}.jpg'
+                cv2.imwrite(filename, frame)
+            elif RT > 0.1:
+                filename = f'screen_caps/train/gas/{name}.jpg'
+                cv2.imwrite(filename, frame)
+
+            print("Timestamp:", timestamp)
+            print("LX:", LX)
+            print("LT:", LT)
+            print("RT:", RT)
+        else:
+            print("No match found.")
+
 
     def get_game_window_coords(self, title="Forza Horizon 4"):
         game_window = gw.getWindowsWithTitle(title)
@@ -87,24 +123,24 @@ class JoystickHandler:
 
         return self.gamepad_state
 
-    def save_gamepad_events(self):
-        """Save the current gamepad state to the CSV file with a timestamp."""
-        timestamp = time.time()
+    # def save_gamepad_events(self):
+    #     """Save the current gamepad state to the CSV file with a timestamp."""
+    #     timestamp = time.time()
 
-        # Write the gamepad state to the CSV
-        self.csv_writer.writerow([
-            timestamp,
-            self.gamepad_state["LX"],
-            self.gamepad_state["LT"],
-            self.gamepad_state["RT"]
-        ])
+    #     # Write the gamepad state to the CSV
+    #     self.csv_writer.writerow([
+    #         timestamp,
+    #         self.gamepad_state["LX"],
+    #         self.gamepad_state["LT"],
+    #         self.gamepad_state["RT"]
+    #     ])
         
-        # Ensure data is flushed to the CSV file
-        self.csv_file.flush()
+    #     # Ensure data is flushed to the CSV file
+    #     self.csv_file.flush()
 
-    def close_csv(self):
-        """Close the CSV file properly."""
-        self.csv_file.close()
+    # def close_csv(self):
+    #     """Close the CSV file properly."""
+    #     self.csv_file.close()
 
 
 # GameSession class to handle the overall session
@@ -129,6 +165,7 @@ class GameSession:
             frame = self.screen_capture.capture_frame()
             # The name will now look like timestamp_joystickLX_joystickLT_joystickRT
             screen_capture_name = f'{timestamp}_{round(joystick_input["LX"],4)}_{round(joystick_input["LT"],4)}_{round(joystick_input["RT"],4)}'
+
             self.screen_capture.save_frame(frame, screen_capture_name)
 
             # Adjust to change how many caps are taken
