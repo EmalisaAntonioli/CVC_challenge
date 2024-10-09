@@ -41,7 +41,7 @@ class ScreenCapture:
 
     def save_frame(self, frame, name):
         # Regular expression pattern
-        pattern = r'(?P<timestamp>\d{8}_\d{6})_(?P<LX>[-+]?[0-9]*\.?[0-9]+)_(?P<LT>[-+]?[0-9]*\.?[0-9]+)_(?P<RT>[-+]?[0-9]*\.?[0-9]+)$'
+        pattern = r'(?P<timestamp>[0-9a-fA-F\-]+)_(?P<LX>[0-9\.-]+)_(?P<LT>[0-9\.-]+)_(?P<RT>[0-9\.-]+)$'
         print(name)
 
         # Search for the pattern in the string
@@ -54,36 +54,18 @@ class ScreenCapture:
             LT = float(match.group('LT'))
             RT = float(match.group('RT'))
 
-            DEADZONE = 0.05  # Deadzone for small analog movements
-            STEERING_THRESHOLD = 0.1  # Steering movement threshold
-            TRIGGER_THRESHOLD = 0.1  # Brake/gas trigger threshold
-
-            # Apply deadzone logic
-            if abs(LX) < DEADZONE:
-                LX = 0
-            if abs(LT) < DEADZONE:
-                LT = 0
-            if abs(RT) < DEADZONE:
-                RT = 0
-
-            # Steering classification
-            if LX > STEERING_THRESHOLD:
+            if LX > 0.1:
                 filename = f'screen_caps/train/steer_right/{name}.jpg'
                 cv2.imwrite(filename, frame)
-            elif LX < -STEERING_THRESHOLD:
+            elif LX < -0.1:
                 filename = f'screen_caps/train/steer_left/{name}.jpg'
                 cv2.imwrite(filename, frame)
-
-            # Brake classification
-            if LT > TRIGGER_THRESHOLD:
+            elif LT > 0.1:
                 filename = f'screen_caps/train/brake/{name}.jpg'
                 cv2.imwrite(filename, frame)
-
-            # Gas classification
-            if RT > TRIGGER_THRESHOLD:
+            elif RT > 0.1:
                 filename = f'screen_caps/train/gas/{name}.jpg'
                 cv2.imwrite(filename, frame)
-
 
             print("Timestamp:", timestamp)
             print("LX:", LX)
@@ -99,6 +81,20 @@ class ScreenCapture:
             game_window = game_window[0]
             return game_window.left, game_window.top, game_window.width, game_window.height
         return None
+    
+    def resize_frame(self, frame):
+        # Cut top 30% off the frame, to reduce distractions        
+        # Get the dimensions of the image
+        height, width, _ = frame.shape
+        
+        # Calculate the height to cut off
+        cut_height = int(height * 30)
+        
+        # Cut the image by slicing the array
+        cropped_frame = frame[cut_height:height, 0:width]  # Cuts off the top part
+        
+        return cropped_frame
+
 
 
 # JoystickHandler class for managing joystick inputs
@@ -124,11 +120,11 @@ class JoystickHandler:
         }
 
         # Open CSV file to store gamepad input data
-        # self.csv_file = open('controller_log.csv', 'a', newline='')
-        # self.csv_writer = csv.writer(self.csv_file)
+        self.csv_file = open('controller_log.csv', 'a', newline='')
+        self.csv_writer = csv.writer(self.csv_file)
         
         # Write CSV header
-        # self.csv_writer.writerow(["Timestamp", "Left Stick X", "Left Stick Y", "Right Stick X", "Right Stick Y", "Trigger Left", "Trigger Right"])
+        self.csv_writer.writerow(["Timestamp", "Left Stick X", "Left Stick Y", "Right Stick X", "Right Stick Y", "Trigger Left", "Trigger Right"])
 
     def get_gamepad_events(self):
         """Poll gamepad events and update the gamepad state."""
@@ -136,29 +132,10 @@ class JoystickHandler:
         
         # Update stick and trigger values
         self.gamepad_state["LX"] = self.joystick.get_axis(0)  # Left Stick X-axis
-        self.gamepad_state["LT"] = self.joystick.get_axis(4)  # Left Trigger
+        self.gamepad_state["LT"] = self.joystick.get_axis(2)  # Left Trigger
         self.gamepad_state["RT"] = self.joystick.get_axis(5)  # Right Trigger
 
         return self.gamepad_state
-
-    # def save_gamepad_events(self):
-    #     """Save the current gamepad state to the CSV file with a timestamp."""
-    #     timestamp = time.time()
-
-    #     # Write the gamepad state to the CSV
-    #     self.csv_writer.writerow([
-    #         timestamp,
-    #         self.gamepad_state["LX"],
-    #         self.gamepad_state["LT"],
-    #         self.gamepad_state["RT"]
-    #     ])
-        
-    #     # Ensure data is flushed to the CSV file
-    #     self.csv_file.flush()
-
-    # def close_csv(self):
-    #     """Close the CSV file properly."""
-    #     self.csv_file.close()
 
 
 # GameSession class to handle the overall session
@@ -174,14 +151,14 @@ class GameSession:
             # Capture joystick inputs
             joystick_input = self.joystick_handler.get_gamepad_events()
 
-            # Uncomment if you want to save the input in a csv file
-            # self.joystick_handler.save_gamepad_events()
-
             # Generates a unique identifier for each frame/input set
-            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            timestamp = str(uuid.uuid1())  
 
             # Capture the game screen
             frame = self.screen_capture.capture_frame()
+
+            # Resize the game screen
+            frame = self.screen_capture.resize_frame(frame)
 
             # The name will now look like timestamp_joystickLX_joystickLT_joystickRT
             screen_capture_name = f'{timestamp}_{round(joystick_input["LX"],4)}_{round(joystick_input["LT"],4)}_{round(joystick_input["RT"],4)}'
@@ -190,7 +167,7 @@ class GameSession:
 
             # Adjust to change how many caps are taken
             time.sleep(0.5)
-        # self.joystick_handler.close_csv()
+        self.joystick_handler.close_csv()
 
 
 if __name__ == '__main__':
@@ -204,4 +181,4 @@ if __name__ == '__main__':
 
     # Start a game session for 60 seconds
     session = GameSession(screen_capture, joystick_handler)
-    session.run(duration=600)
+    session.run(duration=60)
