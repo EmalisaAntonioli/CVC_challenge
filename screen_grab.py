@@ -1,9 +1,9 @@
+import PIL.ImageShow
 import cv2
 from mss import mss
 import numpy as np
 import time
 import uuid
-# import pyvjoystick as pyvjoy
 import os
 import pygetwindow as gw
 from inputs import get_gamepad
@@ -11,12 +11,13 @@ import csv
 import pygame
 import re
 
+
 # Create directory for saving screenshots and inputs
-if not os.path.exists('screen_caps/train'):
-    os.makedirs('screen_caps/train/steer_left')
-    os.makedirs('screen_caps/train/steer_right')
-    os.makedirs('screen_caps/train/brake')
-    os.makedirs('screen_caps/train/gas')
+if not os.path.exists('screen_caps'):
+    os.makedirs('screen_caps')
+    # os.makedirs('screen_caps/train/steer_right')
+    # os.makedirs('screen_caps/train/brake')
+    # os.makedirs('screen_caps/train/gas')
 
 # ScreenCapture class for handling screen capture
 class ScreenCapture:
@@ -36,43 +37,46 @@ class ScreenCapture:
             self.game_area = game_area
 
     def capture_frame(self):
-        gamecap = np.array(self.capture.grab(self.game_area))
-        return gamecap
+        frame = np.array(self.capture.grab(self.game_area))
+        return frame
 
     def save_frame(self, frame, name):
         # Regular expression pattern
-        pattern = r'(?P<timestamp>[0-9a-fA-F\-]+)_(?P<LX>[0-9\.-]+)_(?P<LT>[0-9\.-]+)_(?P<RT>[0-9\.-]+)$'
+        # pattern = r'(?P<timestamp>[0-9a-fA-F\-]+)_(?P<LX>[0-9\.-]+)_(?P<LT>[0-9\.-]+)_(?P<RT>[0-9\.-]+)$'
+        # print(name)
+
+        # # Search for the pattern in the string
+        # match = re.search(pattern, name)
+
+        # if match:
+        #     # Extracting named groups
+        #     timestamp = match.group('timestamp')
+        #     LX = float(match.group('LX'))
+        #     LT = float(match.group('LT'))
+        #     RT = float(match.group('RT'))
+
+        #     if LX > 0.1:
+        #         filename = f'sreen_caps/train/steer_right/{name}.jpg'
+        #         cv2.imwrite(filename, frame)
+        #     elif LX < -0.1:
+        #         filename = f'screen_caps/train/steer_left/{name}.jpg'
+        #         cv2.imwrite(filename, frame)
+        #     elif LT > 0.1:
+        #         filename = f'screen_caps/train/brake/{name}.jpg'
+        #         cv2.imwrite(filename, frame)
+        #     elif RT > 0.1:
+        #         filename = f'screen_caps/train/gas/{name}.jpg'
+        #         cv2.imwrite(filename, frame)
+
+        #     print("Timestamp:", timestamp)
+        #     print("LX:", LX)
+        #     print("LT:", LT)
+        #     print("RT:", RT)
+        # else:
+        #     print("No match found.")
         print(name)
-
-        # Search for the pattern in the string
-        match = re.search(pattern, name)
-
-        if match:
-            # Extracting named groups
-            timestamp = match.group('timestamp')
-            LX = float(match.group('LX'))
-            LT = float(match.group('LT'))
-            RT = float(match.group('RT'))
-
-            if LX > 0.1:
-                filename = f'screen_caps/train/steer_right/{name}.jpg'
-                cv2.imwrite(filename, frame)
-            elif LX < -0.1:
-                filename = f'screen_caps/train/steer_left/{name}.jpg'
-                cv2.imwrite(filename, frame)
-            elif LT > 0.1:
-                filename = f'screen_caps/train/brake/{name}.jpg'
-                cv2.imwrite(filename, frame)
-            elif RT > 0.1:
-                filename = f'screen_caps/train/gas/{name}.jpg'
-                cv2.imwrite(filename, frame)
-
-            print("Timestamp:", timestamp)
-            print("LX:", LX)
-            print("LT:", LT)
-            print("RT:", RT)
-        else:
-            print("No match found.")
+        filename = f'screen_caps/{name}.jpg'
+        cv2.imwrite(filename, frame)
 
 
     def get_game_window_coords(self, title="Forza Horizon 4"):
@@ -88,11 +92,11 @@ class ScreenCapture:
         height, width, _ = frame.shape
         
         # Calculate the height to cut off
-        cut_height = int(height * 30)
-        
+        cut_height = int(height * 0.30)
+
         # Cut the image by slicing the array
         cropped_frame = frame[cut_height:height, 0:width]  # Cuts off the top part
-        
+
         return cropped_frame
 
 
@@ -132,7 +136,7 @@ class JoystickHandler:
         
         # Update stick and trigger values
         self.gamepad_state["LX"] = self.joystick.get_axis(0)  # Left Stick X-axis
-        self.gamepad_state["LT"] = self.joystick.get_axis(2)  # Left Trigger
+        self.gamepad_state["LT"] = self.joystick.get_axis(4)  # Left Trigger
         self.gamepad_state["RT"] = self.joystick.get_axis(5)  # Right Trigger
 
         return self.gamepad_state
@@ -152,7 +156,7 @@ class GameSession:
             joystick_input = self.joystick_handler.get_gamepad_events()
 
             # Generates a unique identifier for each frame/input set
-            timestamp = str(uuid.uuid1())  
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
 
             # Capture the game screen
             frame = self.screen_capture.capture_frame()
@@ -167,7 +171,7 @@ class GameSession:
 
             # Adjust to change how many caps are taken
             time.sleep(0.5)
-        self.joystick_handler.close_csv()
+        # self.joystick_handler.close_csv()
 
 
 if __name__ == '__main__':
@@ -179,6 +183,6 @@ if __name__ == '__main__':
     screen_capture = ScreenCapture()
     joystick_handler = JoystickHandler()
 
-    # Start a game session for 60 seconds
+    # Start a game session for 600 seconds
     session = GameSession(screen_capture, joystick_handler)
-    session.run(duration=60)
+    session.run(duration=600)
