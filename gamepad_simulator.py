@@ -1,3 +1,6 @@
+from vgamepad import VDS4Gamepad
+import time
+
 class GamepadSimulator:
     def __init__(self):
         self.gamepad = VDS4Gamepad()
