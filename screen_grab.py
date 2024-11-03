@@ -1,25 +1,20 @@
-import PIL.ImageShow
 import cv2
 from mss import mss
 import numpy as np
 import time
-import uuid
 import os
 import pygetwindow as gw
-from inputs import get_gamepad
 import csv
 import pygame
-import re
 
-
-# Create directory for saving screenshots and inputs
+# Create directory for saving screenshots
 if not os.path.exists('screen_caps'):
     os.makedirs('screen_caps')
 
-# ScreenCapture class for handling screen capture
 class ScreenCapture:
+    """Handle taking screen captures of the game"""
     def __init__(self, game_area=None):
-        self.capture = mss()  # Correct mss initialization
+        self.capture = mss() 
         if game_area is None:
             game_area = self.get_game_window_coords()
             if game_area is None:
@@ -63,12 +58,9 @@ class ScreenCapture:
 
         return cropped_frame
 
-
-
-# JoystickHandler class for managing joystick inputs
 class JoystickHandler:
+    """JoystickHandler class for managing joystick inputs"""
     def __init__(self):
-        # Initialize pygame
         pygame.init()
         pygame.joystick.init()
         
@@ -107,9 +99,8 @@ class JoystickHandler:
 
         return self.gamepad_state
 
-
-# GameSession class to handle the overall session
 class GameSession:
+    """GameSession class to handle the overall session"""
     def __init__(self, screen_capture, joystick_handler):
         self.screen_capture = screen_capture
         self.joystick_handler = joystick_handler
