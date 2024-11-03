@@ -15,9 +15,6 @@ import re
 # Create directory for saving screenshots and inputs
 if not os.path.exists('screen_caps'):
     os.makedirs('screen_caps')
-    # os.makedirs('screen_caps/train/steer_right')
-    # os.makedirs('screen_caps/train/brake')
-    # os.makedirs('screen_caps/train/gas')
 
 # ScreenCapture class for handling screen capture
 class ScreenCapture:
@@ -41,39 +38,6 @@ class ScreenCapture:
         return frame
 
     def save_frame(self, frame, name):
-        # Regular expression pattern
-        # pattern = r'(?P<timestamp>[0-9a-fA-F\-]+)_(?P<LX>[0-9\.-]+)_(?P<LT>[0-9\.-]+)_(?P<RT>[0-9\.-]+)$'
-        # print(name)
-
-        # # Search for the pattern in the string
-        # match = re.search(pattern, name)
-
-        # if match:
-        #     # Extracting named groups
-        #     timestamp = match.group('timestamp')
-        #     LX = float(match.group('LX'))
-        #     LT = float(match.group('LT'))
-        #     RT = float(match.group('RT'))
-
-        #     if LX > 0.1:
-        #         filename = f'sreen_caps/train/steer_right/{name}.jpg'
-        #         cv2.imwrite(filename, frame)
-        #     elif LX < -0.1:
-        #         filename = f'screen_caps/train/steer_left/{name}.jpg'
-        #         cv2.imwrite(filename, frame)
-        #     elif LT > 0.1:
-        #         filename = f'screen_caps/train/brake/{name}.jpg'
-        #         cv2.imwrite(filename, frame)
-        #     elif RT > 0.1:
-        #         filename = f'screen_caps/train/gas/{name}.jpg'
-        #         cv2.imwrite(filename, frame)
-
-        #     print("Timestamp:", timestamp)
-        #     print("LX:", LX)
-        #     print("LT:", LT)
-        #     print("RT:", RT)
-        # else:
-        #     print("No match found.")
         print(name)
         filename = f'screen_caps/{name}.jpg'
         cv2.imwrite(filename, frame)
@@ -132,7 +96,9 @@ class JoystickHandler:
 
     def get_gamepad_events(self):
         """Poll gamepad events and update the gamepad state."""
-        pygame.event.pump()  # Process event queue
+        
+        # Process event queue
+        pygame.event.pump()  
         
         # Update stick and trigger values
         self.gamepad_state["LX"] = self.joystick.get_axis(0)  # Left Stick X-axis
